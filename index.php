@@ -1,5 +1,6 @@
 <?php
 include "db.php";
+
 $limit = 2;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
@@ -7,38 +8,26 @@ if ($page < 1) $page = 1;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $start = ($page - 1) * $limit;
 
-/* ---------------- TOTAL COUNT QUERY ---------------- */
+/* --------- WHERE CONDITION --------- */
+$where = "";
 if ($search != '') {
-    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM post WHERE tag LIKE ?");
-    $search_param = "%{$search}%";
-    $stmt->bind_param("s", $search_param);
-    $stmt->execute();
-    $result_total = $stmt->get_result();
-    $total_row = $result_total->fetch_assoc();
-    $stmt->close();
-} else {
-    $result_total = $conn->query("SELECT COUNT(*) as total FROM post");
-    $total_row = $result_total->fetch_assoc();
+    $where = "WHERE tag LIKE '%$search%'";
 }
 
+/* --------- TOTAL COUNT --------- */
+$result_total = $conn->query("SELECT COUNT(*) as total FROM post $where");
+$total_row = $result_total->fetch_assoc();
 $total_posts = $total_row['total'];
 $total_pages = ceil($total_posts / $limit);
 
-/* ---------------- MAIN POST QUERY ---------------- */
-if ($search != '') {
-    $stmt = $conn->prepare("SELECT * FROM post WHERE tag LIKE ? ORDER BY id DESC LIMIT ?, ?");
-    $search_param = "%{$search}%";
-    $stmt->bind_param("sii", $search_param, $start, $limit);
-    $stmt->execute();
-    $result = $stmt->get_result();
-} else {
-    $stmt = $conn->prepare("SELECT * FROM post ORDER BY id DESC LIMIT ?, ?");
-    $stmt->bind_param("ii", $start, $limit);
-    $stmt->execute();
-    $result = $stmt->get_result();
-}
+/* --------- MAIN QUERY --------- */
+$result = $conn->query("
+    SELECT * FROM post 
+    $where
+    ORDER BY id DESC 
+    LIMIT $start, $limit
+");
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -168,7 +157,7 @@ for($i = 1; $i <= $total_pages; $i++){
 
 <!-- Footer -->
 <div class="bg-dark text-white text-center p-4 mt-5">
-    <h4>MyBlog</h4>
+    <h4>Blog With me</h4>
     <p>Sharing ideas and stories with the world</p>
     <p>&copy; 2026 MyBlog. All rights reserved.</p>
 </div>
